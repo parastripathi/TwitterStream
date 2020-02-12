@@ -1,8 +1,6 @@
 package spout;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.oracle.javafx.jmx.json.JSONException;
 import entity.Data;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
@@ -12,32 +10,69 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Values;
 
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.storm.utils.Utils;
 
 public class WordReader extends BaseRichSpout {
 
+    private static LinkedBlockingQueue<Data> linkedBlockingQueue = new LinkedBlockingQueue<Data>();
     private SpoutOutputCollector spoutOutputCollector;
-    private FileReader fileReader;
-    private Boolean completed = false;
+    private static HttpURLConnection httpURLConnection = null;
 
 
+    public static void run() {
+        try {
+            InputStream in = httpURLConnection.getInputStream();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+            String line;
+            ObjectMapper mapper = new ObjectMapper();
+            int i = 0;
+            while ((line = reader.readLine()) != null) {
+                JsonNode tree = mapper.readTree(line);
+                JsonNode node = tree.at("/data");
+                Data data = mapper.treeToValue(node, Data.class);
+                i++;
+                linkedBlockingQueue.add(data);
+                if (i > 1000)
+                    break;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
 
     @Override
     public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
-        try {
-            this.fileReader = new FileReader(conf.get("wordsFile").toString());
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
 
+        URL url;
+
+        try {
+
+            url = new URL("https://api.twitter.com/labs/1/tweets/stream/sample");
+            httpURLConnection = (HttpURLConnection) url.openConnection();
+            httpURLConnection.setRequestMethod("GET");
+            httpURLConnection.setRequestProperty("Authorization",
+                    "Bearer AAAAAAAAAAAAAAAAAAAAABzlCQEAAAAAftuxxF1sl5PlZ1evkmzCNgmgt7s"
+                            + "%3DLHrfpGHXoyCeD6DJlFTz4an3lWLw8FWgwFkC1FmrFurCuFdak2");
+
+            ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+            executorService.scheduleAtFixedRate(WordReader::run, 0, 1, TimeUnit.SECONDS);
+
+        } catch (Exception e){
+            System.out.println(e.getMessage());
+        }finally {
+            httpURLConnection.disconnect();
+        }
         this.spoutOutputCollector = collector;
 
     }
@@ -45,35 +80,11 @@ public class WordReader extends BaseRichSpout {
     @Override
     public void nextTuple() {
 
-        if (completed) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
-            return;
-        }
-
-
-        String line;
-        BufferedReader reader = new BufferedReader(fileReader);
-        ObjectMapper mapper = new ObjectMapper();
-//        mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-
-
-        try {
-
-            while ((line = reader.readLine()) != null) {
-                JsonNode tree = mapper.readTree(line);
-                JsonNode node = tree.at("/data");
-                Data tweetData = mapper.treeToValue(node, Data.class);
-                this.spoutOutputCollector.emit(new Values(tweetData));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            completed = true;
+        Data data = linkedBlockingQueue.poll();
+        if(data == null) {
+            Utils.sleep(50);
+        } else {
+            spoutOutputCollector.emit(new Values(data));
         }
 
     }
