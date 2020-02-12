@@ -8,7 +8,7 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 
-public class WordNormalizer extends BaseBasicBolt {
+public class TweetFilter extends BaseBasicBolt {
     @Override
     public void execute(Tuple input, BasicOutputCollector collector) {
         Data data = (Data)input.getValueByField("data");

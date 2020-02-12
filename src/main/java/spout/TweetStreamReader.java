@@ -22,7 +22,7 @@ import java.util.concurrent.TimeUnit;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.storm.utils.Utils;
 
-public class WordReader extends BaseRichSpout {
+public class TweetStreamReader extends BaseRichSpout {
 
     private static LinkedBlockingQueue<Data> linkedBlockingQueue = new LinkedBlockingQueue<Data>();
     private SpoutOutputCollector spoutOutputCollector;
@@ -66,7 +66,7 @@ public class WordReader extends BaseRichSpout {
                             + "%3DLHrfpGHXoyCeD6DJlFTz4an3lWLw8FWgwFkC1FmrFurCuFdak2");
 
             ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
-            executorService.scheduleAtFixedRate(WordReader::run, 0, 1, TimeUnit.SECONDS);
+            executorService.scheduleAtFixedRate(TweetStreamReader::run, 0, 1, TimeUnit.SECONDS);
 
         } catch (Exception e){
             System.out.println(e.getMessage());

@@ -1,11 +1,11 @@
 package topology;
 
-import bolt.WordCounter;
-import bolt.WordNormalizer;
+import bolt.TweetOperator;
+import bolt.TweetFilter;
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.topology.TopologyBuilder;
-import spout.WordReader;
+import spout.TweetStreamReader;
 
 import java.io.File;
 
@@ -17,15 +17,13 @@ public class TopologyMain {
 
         TopologyBuilder builder = new TopologyBuilder();
 
-        builder.setSpout("word-reader",new WordReader());
+        builder.setSpout("tweet-reader",new TweetStreamReader());
 
-        builder.setBolt("word-normalizer",new WordNormalizer()).shuffleGrouping("word-reader");
-        builder.setBolt("word-counter",new WordCounter()).shuffleGrouping("word-normalizer");
+        builder.setBolt("tweet-filter",new TweetFilter()).shuffleGrouping("tweet-reader");
+        builder.setBolt("tweet-operator",new TweetOperator()).shuffleGrouping("tweet-filter");
 
         Config config = new Config();
-        config.put("wordsFile",path);
         config.setDebug(true);
-
 
 
         LocalCluster localCluster = new LocalCluster();
