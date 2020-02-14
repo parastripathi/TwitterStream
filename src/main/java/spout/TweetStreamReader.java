@@ -1,9 +1,5 @@
 package spout;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import entity.Data;
 import entity.DataModified;
 
 import lombok.Getter;
@@ -18,8 +14,6 @@ import org.apache.storm.tuple.Values;
 
 import java.io.*;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 
 import java.util.Map;
@@ -31,9 +25,9 @@ import java.util.concurrent.TimeUnit;
 import org.apache.storm.utils.Utils;
 
 import config.StormConfig;
-import util.WriteThread;
+import util.ConsumeTweetStream;
 
-import static constants.ApplicationConstants.SPEC;
+import static constants.ApplicationConstants.STREAM_URL;
 
 @Getter
 @Setter
@@ -60,18 +54,14 @@ public class TweetStreamReader extends BaseRichSpout {
         try {
 
             String bearerToken = stormConfig.getProperty("BEARER_TOKEN");
-            url = new URL(SPEC);
+            url = new URL(STREAM_URL);
             httpURLConnection = (HttpURLConnection) url.openConnection();
             httpURLConnection.setRequestMethod("GET");
             httpURLConnection.setRequestProperty("Authorization", bearerToken);
 
             executorService = Executors.newSingleThreadScheduledExecutor();
-            executorService.scheduleAtFixedRate(WriteThread::run, 0, 1, TimeUnit.SECONDS);
+            executorService.scheduleAtFixedRate(ConsumeTweetStream::run, 0, 1, TimeUnit.SECONDS);
 
-        } catch (ProtocolException e) {
-            e.printStackTrace();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -84,18 +74,18 @@ public class TweetStreamReader extends BaseRichSpout {
     @Override
     public void nextTuple() {
 
-        DataModified data = linkedBlockingQueue.poll();
-        if (data == null) {
+        DataModified tweet = linkedBlockingQueue.poll();
+        if (tweet == null) {
             Utils.sleep(50);
         } else {
-            spoutOutputCollector.emit(new Values(data));
+            spoutOutputCollector.emit(new Values(tweet));
         }
 
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("data"));
+        declarer.declare(new Fields("tweet"));
     }
 
     protected void finalize() {

@@ -15,7 +15,7 @@ public class ApplicationConstants {
     public static final String PUBLISHED_DATE = "createdAt";
 
     //API Endpoints
-    public static final String SPEC = "https://api.twitter.com/labs/1/tweets/stream/sample";
+    public static final String STREAM_URL = "https://api.twitter.com/labs/1/tweets/stream/sample";
 
 
 }

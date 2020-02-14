@@ -20,7 +20,8 @@ public class TopologyMain {
         builder.setSpout(TWEET_READER, new TweetStreamReader());
         builder.setBolt(TWEET_FILTER, new TweetFilter()).shuffleGrouping(TWEET_READER);
 
-        BaseWindowedBolt aggregating = new AggregatingBolt()
+        BaseWindowedBolt aggregating;
+        aggregating = new AggregatingBolt()
                 .withTimestampField(PUBLISHED_DATE)
                 .withLag(BaseWindowedBolt.Duration.seconds(1))
                 .withWindow(BaseWindowedBolt.Duration.seconds(10));

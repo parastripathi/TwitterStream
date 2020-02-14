@@ -5,20 +5,20 @@ import redis.clients.jedis.JedisPool;
 
 public class JedisConfig {
 
-    private static JedisPool pool = null;
+    public static final String REDIS_HOST = "REDIS_HOST";
+    public static final String REDIS_PORT = "REDIS_PORT";
     private static Jedis jedis = null;
-    private static String redisHost;
-    private static int redisPort;
 
     public static Jedis getJedisInstance() {
 
         if (null == jedis) {
             StormConfig stormConfig = StormConfig.getInstance();
-            redisHost = stormConfig.getProperty("REDIS_HOST");
-            redisPort = Integer.parseInt(stormConfig.getProperty("REDIS_PORT"));
+            String redisHost = stormConfig.getProperty(REDIS_HOST);
+            int redisPort = Integer.parseInt(stormConfig.getProperty(REDIS_PORT));
 
-            pool = new JedisPool(redisHost, redisPort);
+            JedisPool pool = new JedisPool(redisHost, redisPort);
             jedis = pool.getResource();
+
         }
         return jedis;
     }

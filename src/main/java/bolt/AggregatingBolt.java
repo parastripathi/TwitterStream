@@ -17,12 +17,11 @@ import java.util.*;
 
 public class AggregatingBolt extends BaseWindowedBolt {
 
-    public static final String YYYY_MM_DD = "yyyy/MM/dd";
-    public static final String TEXT = "text";
-    public static final String CREATED_AT = "createdAt";
+    private static final String YYYY_MM_DD = "yyyy/MM/dd";
+    private static final String TEXT = "text";
+    private static final String CREATED_AT = "createdAt";
 
     private static Jedis jedis = null;
-    private static Transaction transaction = null;
 
     @Override
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
@@ -37,7 +36,7 @@ public class AggregatingBolt extends BaseWindowedBolt {
     @Override
     public void execute(TupleWindow tupleWindow) {
 
-        transaction = jedis.multi();
+        Transaction transaction = jedis.multi();
 
         DateFormat dateFormat = new SimpleDateFormat(YYYY_MM_DD);
         Date date = new Date();

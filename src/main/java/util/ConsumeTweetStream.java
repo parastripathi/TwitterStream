@@ -17,10 +17,10 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class WriteThread {
+public class ConsumeTweetStream {
 
-    public static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
-    public static final String JSON_ROOT = "/data";
+    private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+    private static final String JSON_ROOT = "/data";
 
     public static void run() {
 
@@ -64,11 +64,7 @@ public class WriteThread {
                 if (i > 1000)
                     break;
             }
-        } catch (JsonProcessingException e) {
-            System.out.println(e.getMessage());
-        } catch (ParseException e) {
-            System.out.println(e.getMessage());
-        } catch (IOException e) {
+        } catch (ParseException | IOException e) {
             System.out.println(e.getMessage());
         }
 

@@ -4,14 +4,15 @@ import java.util.Properties;
 
 public class StormConfig {
 
+    public static final String CONFIG_NAME = "config";
     private static StormConfig stormConfig = null;
-    Properties configFile;
+    private Properties configFile;
 
-    public StormConfig() {
+    private StormConfig() {
         configFile = new java.util.Properties();
         try {
             configFile.load(this.getClass().getClassLoader().
-                    getResourceAsStream("config.cfg"));
+                    getResourceAsStream(CONFIG_NAME + ".cfg"));
         } catch (Exception eta) {
             eta.printStackTrace();
         }
@@ -25,8 +26,7 @@ public class StormConfig {
     }
 
     public String getProperty(String key) {
-        String value = this.configFile.getProperty(key);
-        return value;
+        return this.configFile.getProperty(key);
     }
 
 
