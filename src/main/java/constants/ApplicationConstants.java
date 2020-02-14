@@ -2,9 +2,20 @@ package constants;
 
 public class ApplicationConstants {
 
-    public static String CONSUMER_KEY_KEY = "bmYGGOwRkwzQZ7vEnF7IPFGop";
-    public static String CONSUMER_SECRET_KEY = "AVM3xKo6r4n0f9xC2OixJTqInVIYUVAc9qSvpoQaByqHOflixx";
-    public static String ACCESS_TOKEN_KEY = "1227310864908177408-D3IxrzFILBZgxqRk8K2m9AfCmREvtG";
-    public static String ACCESS_TOKEN_SECRET_KEY = "2s3EBCZmq9xc2NKtc0aK4cfvgHYrnxycRWHfqVRdMRKjM";
+    //Spouts
+    public static final String TWEET_READER = "tweet-reader";
+
+    //Bolts
+    public static final String TWEET_FILTER = "tweet-filter";
+    public static final String AGGREGATING_BOLT = "aggregating-bolt";
+
+    //Topologies
+    public static final String TWITTER_TOPOLOGY = "twitter-topology";
+
+    public static final String PUBLISHED_DATE = "createdAt";
+
+    //API Endpoints
+    public static final String SPEC = "https://api.twitter.com/labs/1/tweets/stream/sample";
+
 
 }

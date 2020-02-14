@@ -4,53 +4,59 @@ import org.apache.storm.task.OutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
 import org.apache.storm.topology.base.BaseWindowedBolt;
-import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
-import org.apache.storm.tuple.Values;
 import org.apache.storm.windowing.TupleWindow;
+import redis.clients.jedis.Jedis;
+import redis.clients.jedis.Transaction;
+import config.JedisConfig;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
 
 public class AggregatingBolt extends BaseWindowedBolt {
-    private OutputCollector outputCollector;
+
+    public static final String YYYY_MM_DD = "yyyy/MM/dd";
+    public static final String TEXT = "text";
+    public static final String CREATED_AT = "createdAt";
+
+    private static Jedis jedis = null;
+    private static Transaction transaction = null;
 
     @Override
     public void prepare(Map stormConf, TopologyContext context, OutputCollector collector) {
-        this.outputCollector = collector;
+        jedis = JedisConfig.getJedisInstance();
     }
 
     @Override
     public void declareOutputFields(OutputFieldsDeclarer declarer) {
-        declarer.declare(new Fields("publishedDate", "title"));
+
     }
 
     @Override
     public void execute(TupleWindow tupleWindow) {
 
+        transaction = jedis.multi();
+
+        DateFormat dateFormat = new SimpleDateFormat(YYYY_MM_DD);
+        Date date = new Date();
+        String myKey = dateFormat.format(date);
         List<Tuple> tuples = tupleWindow.get();
         tuples.sort(Comparator.comparing(this::getTimestamp));
 
-        List<String> list = new ArrayList<>();
+        for (Tuple tuple : tuples) {
+            String text = tuple.getStringByField(TEXT);
+            Long time = tuple.getLongByField(CREATED_AT);
+            transaction.zadd(myKey, Double.valueOf(String.valueOf(time)), text);
 
-        for(Tuple tuple:tuples){
-            String text = tuple.getStringByField("title");
-            list.add(text);
         }
 
-        String delim = "----***----";
-        String combinedList = String.join(delim, list);
+        transaction.exec();
 
-        String beginningTimestamp = String.valueOf(getTimestamp(tuples.get(0)));
-        String endTimestamp = String.valueOf(getTimestamp(tuples.get(tuples.size() - 1)));
-
-        Values values = new Values(beginningTimestamp+"_"+endTimestamp,combinedList);
-        outputCollector.emit(values);
     }
 
     private Long getTimestamp(Tuple tuple) {
-        return tuple.getLongByField("publishedDate");
+        return tuple.getLongByField(CREATED_AT);
     }
 }

@@ -1,8 +1,13 @@
 package spout;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import entity.Data;
 import entity.DataModified;
+
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.storm.spout.SpoutOutputCollector;
 import org.apache.storm.task.TopologyContext;
 import org.apache.storm.topology.OutputFieldsDeclarer;
@@ -13,19 +18,25 @@ import org.apache.storm.tuple.Values;
 
 import java.io.*;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.URL;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.storm.utils.Utils;
 
+import config.StormConfig;
+import util.WriteThread;
+
+import static constants.ApplicationConstants.SPEC;
+
+@Getter
+@Setter
 public class TweetStreamReader extends BaseRichSpout {
 
     private static LinkedBlockingQueue<DataModified> linkedBlockingQueue = new LinkedBlockingQueue<DataModified>();
@@ -33,67 +44,36 @@ public class TweetStreamReader extends BaseRichSpout {
     private SpoutOutputCollector spoutOutputCollector;
     private ScheduledExecutorService executorService = null;
 
-    public static void run() {
-        try {
-            InputStream in = httpURLConnection.getInputStream();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-            String line;
-            ObjectMapper mapper = new ObjectMapper();
-            int i = 0;
-
-            int qsize = linkedBlockingQueue.size();
-
-            while ((line = reader.readLine()) != null) {
-                JsonNode tree = mapper.readTree(line);
-                JsonNode node = tree.at("/data");
-                Data data = mapper.treeToValue(node, Data.class);
-
-                DataModified dataModified = new DataModified();
-
-                dataModified.setAuthorId(data.getAuthorId());
-                dataModified.setId(data.getId());
-                dataModified.setText(data.getText());
-
-                String myDate = data.getCreatedAt();
-                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-                Date date = sdf.parse(myDate);
-                long millis = date.getTime();
-
-                dataModified.setCreatedAt(millis);
-
-                i++;
-                linkedBlockingQueue.add(dataModified);
-                if (i > 1000)
-                    break;
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
+    public static HttpURLConnection getHttpURLConnection() {
+        return httpURLConnection;
     }
 
+    public static LinkedBlockingQueue<DataModified> getLinkedBlockingQueue() {
+        return linkedBlockingQueue;
+    }
 
     @Override
     public void open(Map conf, TopologyContext context, SpoutOutputCollector collector) {
 
         URL url;
-
+        StormConfig stormConfig = StormConfig.getInstance();
         try {
 
-            url = new URL("https://api.twitter.com/labs/1/tweets/stream/sample");
+            String bearerToken = stormConfig.getProperty("BEARER_TOKEN");
+            url = new URL(SPEC);
             httpURLConnection = (HttpURLConnection) url.openConnection();
             httpURLConnection.setRequestMethod("GET");
-            httpURLConnection.setRequestProperty("Authorization",
-                    "Bearer AAAAAAAAAAAAAAAAAAAAABzlCQEAAAAAftuxxF1sl5PlZ1evkmzCNgmgt7s"
-                            + "%3DLHrfpGHXoyCeD6DJlFTz4an3lWLw8FWgwFkC1FmrFurCuFdak2");
+            httpURLConnection.setRequestProperty("Authorization", bearerToken);
 
             executorService = Executors.newSingleThreadScheduledExecutor();
-            executorService.scheduleAtFixedRate(TweetStreamReader::run, 0, 1, TimeUnit.SECONDS);
+            executorService.scheduleAtFixedRate(WriteThread::run, 0, 1, TimeUnit.SECONDS);
 
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+        } catch (ProtocolException e) {
+            e.printStackTrace();
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
         this.spoutOutputCollector = collector;
@@ -118,7 +98,7 @@ public class TweetStreamReader extends BaseRichSpout {
         declarer.declare(new Fields("data"));
     }
 
-    protected void finalize(){
+    protected void finalize() {
         httpURLConnection.disconnect();
         executorService.shutdown();
     }
